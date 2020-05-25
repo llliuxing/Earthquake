@@ -1,0 +1,52 @@
+import requests
+from bs4 import BeautifulSoup
+from pyecharts import Bar
+
+all_data=[]
+
+#获取页面
+def get_page(url):
+    headers={
+         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36'
+    }#头部设置，默认头部有时候会被网页反扒而出错
+    response=requests.get(url,headers=headers)
+    if response.status_code==200:
+        return response
+    return None
+
+#分析页面
+def parse_page(html):    
+    text=html.content.decode('utf-8')
+    soup=BeautifulSoup(text,'html5lib')
+    
+    news_content=soup.find('div',class_='news-content')
+    tables=news_content.select("table")
+    for table in tables:
+        trs=table.find_all("tr")[1:]
+        for tr in trs:
+            relocation=tr.find_all("a")[0].string#参考位置
+            magnitude=tr.find("td",{"style":"padding-left: 20px"}).string#震级
+        
+            all_data.append({"参考位置":relocation,"震级": float(magnitude)})#在列表末尾添加新的对象
+            print({"参考位置":relocation,"震级": float(magnitude)})
+
+    
+#可视化操作    
+def view(all_data):
+    data=all_data[0:10]
+    relocations=map(lambda x:x['参考位置'],data)
+    magnitudes=map(lambda x:x['震级'],data)
+    
+    chart=Bar('中国地震网')
+    chart.add('',list(relocations),list(magnitudes))
+    chart.render('earthquake.html')
+    
+def main():
+    url='http://news.ceic.ac.cn/index.html?time=1589895694'
+    html=get_page(url)
+    parse_page(html)
+    
+    view(all_data)
+    
+if __name__=='__main__':
+    main()
